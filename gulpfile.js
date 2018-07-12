@@ -11,8 +11,13 @@ var gulp         = require('gulp'),
     connect      = require('gulp-connect'),
     uglify       = require('gulp-uglify'),
     concat       = require('gulp-concat'),
-    inject       = require('gulp-inject'),
-    autoprefixer = require('gulp-autoprefixer');
+    inject       = require('gulp-inject');
+
+var imagemin     = require('gulp-imagemin'),
+    imageminJpg  = require('imagemin-jpeg-recompress'),
+    imageminPng  = require('imagemin-pngquant'),
+    imageminGif  = require('imagemin-gifsicle'),
+    svgmin       = require('gulp-svgmin');
 
 var ROOT        = './src/',
     outputDir   = './dist';
@@ -56,6 +61,35 @@ gulp.task('css:build', function() {
   .pipe(gulp.dest(outputDir + '/assets/css/'));
 });
 
+// jpg,png,gif画像の圧縮タスク
+gulp.task('imagemin', function(){
+  var srcGlob = ROOT + 'assets/images/*.+(jpg|jpeg|png|gif)';
+ 
+  if (checkDirectoryContent(ROOT + 'assets/images')) {
+    gulp.src( srcGlob )
+      .pipe(imagemin([
+        imageminPng(),
+        imageminJpg(),
+        imageminGif({
+            interlaced: false,
+            optimizationLevel: 3,
+            colors:180
+        })
+      ]))
+      .pipe(gulp.dest(outputDir + '/assets/images'));
+  }
+});
+// svg画像の圧縮タスク
+gulp.task('svgmin', function(){
+  var srcGlob = ROOT + 'assets/images/*.+(svg)';
+    
+  if (checkDirectoryContent(ROOT + 'assets/images')) {
+    gulp.src( srcGlob )
+      .pipe(svgmin())
+      .pipe(gulp.dest(outputDir + '/assets/images'));
+  }
+});
+
 // JS TASK FOR BUILD PROCESS
 gulp.task('js:build', function() {
   gulp.src(jsSources)
@@ -77,6 +111,7 @@ gulp.task('watch', function() {
   gulp.watch(htmlSources, ['html']);
 });
 
+// TASK FOR THE LOCAL SERVER
 gulp.task('connect', function() {
   connect.server({
     root: ROOT,
@@ -99,4 +134,4 @@ gulp.task('html', function() {
 // });
 
 gulp.task('default', ['html', 'sass', 'js', 'connect', 'watch']);
-gulp.task('build', ['copy', 'css:build', 'js:build']);
+gulp.task('build', ['copy', 'css:build', 'js:build', 'imagemin', 'svgmin']);
