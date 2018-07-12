@@ -2,47 +2,40 @@
 
 var emptyDir = require('empty-dir');
 
-var gulp = require('gulp'),
-    gutil = require('gulp-util'),
-    sass = require('gulp-sass'),
-    cleanCSS = require('gulp-clean-css'),
-    postcss = require('gulp-postcss'),
-    cssnext = require('postcss-cssnext'),
-    connect = require('gulp-connect'),
-    uglify = require('gulp-uglify'),
-    concat = require('gulp-concat'),
-    inject = require('gulp-inject'),
+var gulp         = require('gulp'),
+    gutil        = require('gulp-util'),
+    sass         = require('gulp-sass'),
+    cleanCSS     = require('gulp-clean-css'),
+    postcss      = require('gulp-postcss'),
+    cssnext      = require('postcss-cssnext'),
+    connect      = require('gulp-connect'),
+    uglify       = require('gulp-uglify'),
+    concat       = require('gulp-concat'),
+    inject       = require('gulp-inject'),
     autoprefixer = require('gulp-autoprefixer');
 
-var ROOT = './src/';
-// var coffeeSources = ['scripts/hello.coffee'],
-    // jsSources = ['scripts/*.js'],
+var ROOT        = './src/',
+    outputDir   = './dist';
+
 var sassSources = [ROOT + 'assets/**/*.scss'],
-    cssSources = [ROOT + 'assets/css/*.css', ROOT + 'assets/css/**/*.css'],
+    cssSources  = [ROOT + 'assets/css/*.css', ROOT + 'assets/css/**/*.css'],
     htmlSources = [ROOT + '*.html'],
     fontSources = [ROOT + 'assets/fonts/**'],
-    outputDir = 'dist';
+    jsSources   = [ROOT + 'assets/**/*.js']
 
-function checkDirectoryContent(dirPath) {
-  return !(emptyDir.sync(dirPath))
-}
+// Check if a directory is empty or not
+function checkDirectoryContent(dirPath) { return !(emptyDir.sync(dirPath)) }
 
-gulp.task('log', function() {
-  gutil.log('== My First Task ==')
-});
-
+// COPY FILES TO DIST ON BUILD
 gulp.task('copy', function() {
-  console.log("start");
-  
   gulp.src(htmlSources).pipe(gulp.dest(outputDir));
  
   if (checkDirectoryContent(ROOT + 'assets/fonts')) {
     gulp.src(fontSources).pipe(gulp.dest(outputDir + '/assets/fonts'))
-  }
-  
-  
+  }  
 });
 
+// TASK FOR SASS AND CSS FILES 
 gulp.task('sass', function() {
   gulp.src(sassSources)
     .pipe(sass({style: 'expanded'}))
@@ -52,35 +45,34 @@ gulp.task('sass', function() {
     .pipe(connect.reload())
 });
 
+// CSS TASK FOR BUILD PROCESS
 gulp.task('css:build', function() {
   var processors = [
-      cssnext({browsers: ['last 2 version']})
+    cssnext({browsers: ['last 2 version']})
   ];
   gulp.src(cssSources)
-    .pipe(postcss(processors))
-    .pipe(cleanCSS({compatibility: 'ie8'}))
-    .pipe(gulp.dest(outputDir + '/assets/css/'));
+  .pipe(postcss(processors))
+  .pipe(cleanCSS({compatibility: 'ie8'}))
+  .pipe(gulp.dest(outputDir + '/assets/css/'));
 });
 
+// JS TASK FOR BUILD PROCESS
+gulp.task('js:build', function() {
+  gulp.src(jsSources)
+    .pipe(uglify())
+    .pipe(concat('script.js'))
+    .pipe(gulp.dest(outputDir　+ '/assets/js/'))
+});
 
-// gulp.task('coffee', function() {
-//   gulp.src(coffeeSources)
-//   .pipe(coffee({bare: true})
-//     .on('error', gutil.log))
-//   .pipe(gulp.dest('scripts'))
-// });
+// JS TASK FOR JS FILES
+gulp.task('js', function() {
+  gulp.src(jsSources)
+    .pipe(connect.reload())
+});
 
-// gulp.task('js', function() {
-//   gulp.src(jsSources)
-//   .pipe(uglify())
-//   .pipe(concat('script.js'))
-//   .pipe(gulp.dest(outputDir))
-//   .pipe(connect.reload())
-// });
-
+// WATCH FOR ANY CHANGES MADE IN THE SPECIFIED FILES
 gulp.task('watch', function() {
-  // gulp.watch(coffeeSources, ['coffee']);
-  // gulp.watch(jsSources, ['js']);
+  gulp.watch(jsSources  , ['js']);
   gulp.watch(sassSources, ['sass']);
   gulp.watch(htmlSources, ['html']);
 });
@@ -97,14 +89,14 @@ gulp.task('html', function() {
   .pipe(connect.reload())
 });
 
-gulp.task('index', function () {
-  var target = gulp.src(ROOT + 'index.html');
-  // It's not necessary to read the files (will speed up things), we're only after their paths:
-  var sources = gulp.src(['./src/assets/**/*.js', ROOT + 'assets/css/*.css'], {read: false});
+// gulp.task('index', function () {
+//   var target = gulp.src(ROOT + 'index.html');
+//   // It's not necessary to read the files (will speed up things), we're only after their paths:
+//   var sources = gulp.src([ROOT + 'assets/css/style.css']);
  
-  return target.pipe(inject(sources))
-    .pipe(gulp.dest('./assets/'));
-});
+//   return target.pipe(inject(sources, { relative: true }))
+//     .pipe(gulp.dest('./assets/css'));
+// });
 
-gulp.task('default', ['index', 'html', 'sass', 'connect', 'watch']);
-gulp.task('build', ['copy', 'css:build']);
+gulp.task('default', ['html', 'sass', 'js', 'connect', 'watch']);
+gulp.task('build', ['copy', 'css:build', 'js:build']);
