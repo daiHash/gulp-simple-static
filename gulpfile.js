@@ -35,7 +35,8 @@ const sassSources   = [ROOT + 'assets/**/*.scss'],
       cssSources    = [ROOT + 'assets/css/*.css', ROOT + 'assets/css/**/*.css'],
       htmlSources   = [ROOT + '*.html'],
       fontSources   = [ROOT + 'assets/fonts/**'],
-      jsSources     = [ROOT + 'assets/**/*.js']
+      jsSources     = [ROOT + 'assets/**/*.js'],
+      jsBuldSRC     =  ROOT + 'assets/js/main.js';
 
 // * Check if a directory is empty or not
 function checkDirectoryContent(dirPath) { return !(emptyDir.sync(dirPath)) }
@@ -140,14 +141,11 @@ gulp.task('html', function() {
   .pipe(connect.reload())
 });
 
-// gulp.task('index', function () {
-//   var target = gulp.src(ROOT + 'index.html');
-//   // It's not necessary to read the files (will speed up things), we're only after their paths:
-//   var sources = gulp.src([ROOT + 'assets/css/style.css']);
- 
-//   return target.pipe(inject(sources, { relative: true }))
-//     .pipe(gulp.dest('./assets/css'));
-// });
+gulp.task('inject', function () {
+  var target = gulp.src(ROOT + 'index.html');
+  target.pipe(inject(gulp.src([jsBuldSRC, ROOT + 'assets/css/style.css' ], {read: false}),{relative: true})) // 2 - indicating that we need to inject all file with .js and .css extension.
+    .pipe(gulp.dest(NODE_ENV === 'development' ? ROOT : outputDir));
+});
 
-gulp.task('default', ['html', 'sass', 'js', 'connect', 'watch']);
+gulp.task('default', ['html', 'sass', 'js', 'inject', 'connect', 'watch']);
 gulp.task('build', ['copy', 'css:build', 'js:build', 'imagemin', 'svgmin']);

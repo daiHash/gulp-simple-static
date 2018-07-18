@@ -1,7 +1,7 @@
 'use strict';
 
-const logger = (word = 'bob') => {
-  console.log(123, word);
+const logger = (word = 'Hi,') => {
+  console.log(word, '🤨!!!');
 }
 
 logger();
