@@ -1,6 +1,8 @@
 'use strict';
 
-const emptyDir = require('empty-dir');
+const emptyDir      = require('empty-dir'),
+      browserSync   = require('browser-sync'),
+      reload        = browserSync.reload;
 
 // * Packages for GULP
 const gulp          = require('gulp'),
@@ -50,6 +52,19 @@ gulp.task('copy', function() {
   }  
 });
 
+// * BROWSER SYNC TASK
+gulp.task('browser-sync', function() {
+  browserSync({
+      server: {
+          baseDir: ROOT
+      }
+  });
+});
+
+gulp.task('bs-reload', function () {
+  browserSync.reload();
+});
+
 // * TASK FOR SASS AND CSS FILES 
 gulp.task('sass', function() {
   gulp.src(sassSources)
@@ -57,7 +72,7 @@ gulp.task('sass', function() {
       .on('error', sass.logError)
     .pipe(concat('style.css'))
     .pipe(gulp.dest(ROOT + 'assets/css/'))
-    .pipe(connect.reload())
+    .pipe(reload({stream:true}));
 });
 
 // * CSS TASK FOR BUILD PROCESS
@@ -118,14 +133,14 @@ gulp.task('js', function() {
     // * Uncomment if you want an unminify js file.
     // .pipe(babel())
     .pipe(gulp.dest(ROOT))
-    .pipe(connect.reload())
+    .pipe(reload({stream:true}));
 });
 
 // * WATCH FOR ANY CHANGES MADE IN THE SPECIFIED FILES
 gulp.task('watch', function() {
-  gulp.watch(jsSources  , ['js']);
-  gulp.watch(sassSources, ['sass']);
-  gulp.watch(htmlSources, ['html']);
+  gulp.watch(jsSources  , ['js', 'bs-reload']);
+  gulp.watch(sassSources, ['sass', 'bs-reload']);
+  gulp.watch(htmlSources, ['html', 'bs-reload']);
 });
 
 // * TASK FOR THE LOCAL SERVER
@@ -138,7 +153,7 @@ gulp.task('connect', function() {
 
 gulp.task('html', function() {
   gulp.src(htmlSources)
-  .pipe(connect.reload())
+    .pipe(reload({stream:true}));
 });
 
 gulp.task('inject', function () {
@@ -147,5 +162,5 @@ gulp.task('inject', function () {
     .pipe(gulp.dest(NODE_ENV === 'development' ? ROOT : outputDir));
 });
 
-gulp.task('default', ['html', 'sass', 'js', 'inject', 'connect', 'watch']);
+gulp.task('default', ['html', 'sass', 'js', 'inject', 'watch', 'browser-sync']);
 gulp.task('build', ['copy', 'css:build', 'js:build', 'imagemin', 'svgmin']);
