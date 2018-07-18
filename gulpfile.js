@@ -11,7 +11,6 @@ const gulp          = require('gulp'),
       cleanCSS      = require('gulp-clean-css'),
       postcss       = require('gulp-postcss'),
       cssnext       = require('postcss-cssnext'),
-      connect       = require('gulp-connect'),
       uglify        = require('gulp-uglify'),
       concat        = require('gulp-concat'),
       inject        = require('gulp-inject');
@@ -141,14 +140,6 @@ gulp.task('watch', function() {
   gulp.watch(jsSources  , ['js', 'bs-reload']);
   gulp.watch(sassSources, ['sass', 'bs-reload']);
   gulp.watch(htmlSources, ['html', 'bs-reload']);
-});
-
-// * TASK FOR THE LOCAL SERVER
-gulp.task('connect', function() {
-  connect.server({
-    root: ROOT,
-    livereload: true
-  })
 });
 
 gulp.task('html', function() {
