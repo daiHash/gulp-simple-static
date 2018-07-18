@@ -1,37 +1,46 @@
 'use strict';
 
-var emptyDir = require('empty-dir');
+const emptyDir = require('empty-dir');
 
-var gulp         = require('gulp'),
-    gutil        = require('gulp-util'),
-    sass         = require('gulp-sass'),
-    cleanCSS     = require('gulp-clean-css'),
-    postcss      = require('gulp-postcss'),
-    cssnext      = require('postcss-cssnext'),
-    connect      = require('gulp-connect'),
-    uglify       = require('gulp-uglify'),
-    concat       = require('gulp-concat'),
-    inject       = require('gulp-inject');
+// * Packages for GULP
+const gulp          = require('gulp'),
+      babel         = require('gulp-babel'),
+      sass          = require('gulp-sass'),
+      cleanCSS      = require('gulp-clean-css'),
+      postcss       = require('gulp-postcss'),
+      cssnext       = require('postcss-cssnext'),
+      connect       = require('gulp-connect'),
+      uglify        = require('gulp-uglify'),
+      concat        = require('gulp-concat'),
+      inject        = require('gulp-inject');
 
-var imagemin     = require('gulp-imagemin'),
-    imageminJpg  = require('imagemin-jpeg-recompress'),
-    imageminPng  = require('imagemin-pngquant'),
-    imageminGif  = require('imagemin-gifsicle'),
-    svgmin       = require('gulp-svgmin');
+// * Packages for WEBPACK      
+const webpackStream = require("webpack-stream"),
+      webpack       = require("webpack"),
+      webpackConfig = require("./webpack.config");
 
-var ROOT        = './src/',
-    outputDir   = './dist';
+// * Packages to handle IMAGES
+const imagemin      = require('gulp-imagemin'),
+      imageminJpg   = require('imagemin-jpeg-recompress'),
+      imageminPng   = require('imagemin-pngquant'),
+      imageminGif   = require('imagemin-gifsicle'),
+      svgmin        = require('gulp-svgmin');
 
-var sassSources = [ROOT + 'assets/**/*.scss'],
-    cssSources  = [ROOT + 'assets/css/*.css', ROOT + 'assets/css/**/*.css'],
-    htmlSources = [ROOT + '*.html'],
-    fontSources = [ROOT + 'assets/fonts/**'],
-    jsSources   = [ROOT + 'assets/**/*.js']
+const ROOT          = './src/',
+      outputDir     = './dist';
 
-// Check if a directory is empty or not
+let   NODE_ENV      = process.env.NODE_ENV;
+
+const sassSources   = [ROOT + 'assets/**/*.scss'],
+      cssSources    = [ROOT + 'assets/css/*.css', ROOT + 'assets/css/**/*.css'],
+      htmlSources   = [ROOT + '*.html'],
+      fontSources   = [ROOT + 'assets/fonts/**'],
+      jsSources     = [ROOT + 'assets/**/*.js']
+
+// * Check if a directory is empty or not
 function checkDirectoryContent(dirPath) { return !(emptyDir.sync(dirPath)) }
 
-// COPY FILES TO DIST ON BUILD
+// * COPY FILES TO DIST ON BUILD
 gulp.task('copy', function() {
   gulp.src(htmlSources).pipe(gulp.dest(outputDir));
  
@@ -40,7 +49,7 @@ gulp.task('copy', function() {
   }  
 });
 
-// TASK FOR SASS AND CSS FILES 
+// * TASK FOR SASS AND CSS FILES 
 gulp.task('sass', function() {
   gulp.src(sassSources)
     .pipe(sass({style: 'expanded'}))
@@ -50,7 +59,7 @@ gulp.task('sass', function() {
     .pipe(connect.reload())
 });
 
-// CSS TASK FOR BUILD PROCESS
+// * CSS TASK FOR BUILD PROCESS
 gulp.task('css:build', function() {
   var processors = [
     cssnext({browsers: ['last 2 version']})
@@ -61,7 +70,7 @@ gulp.task('css:build', function() {
   .pipe(gulp.dest(outputDir + '/assets/css/'));
 });
 
-// jpg,png,gif画像の圧縮タスク
+// * TASK TO COMPRESS JPG, JPEG, PNG AMD GIF FILES
 gulp.task('imagemin', function(){
   var srcGlob = ROOT + 'assets/images/*.+(jpg|jpeg|png|gif)';
  
@@ -79,7 +88,7 @@ gulp.task('imagemin', function(){
       .pipe(gulp.dest(outputDir + '/assets/images'));
   }
 });
-// svg画像の圧縮タスク
+// * TASK TO COMPRESS SVG FILES
 gulp.task('svgmin', function(){
   var srcGlob = ROOT + 'assets/images/*.+(svg)';
     
@@ -90,28 +99,35 @@ gulp.task('svgmin', function(){
   }
 });
 
-// JS TASK FOR BUILD PROCESS
+// * JS TASK FOR BUILD PROCESS
 gulp.task('js:build', function() {
+  NODE_ENV = 'production';
   gulp.src(jsSources)
-    .pipe(uglify())
-    .pipe(concat('script.js'))
-    .pipe(gulp.dest(outputDir　+ '/assets/js/'))
+    .pipe(webpackStream(webpackConfig, webpack))
+    // * Uncomment if you want an unminify js file.
+    // .pipe(babel())
+    .pipe(gulp.dest(outputDir))
 });
 
-// JS TASK FOR JS FILES
+// * JS TASK FOR JS FILES
 gulp.task('js', function() {
+  NODE_ENV = 'development';
   gulp.src(jsSources)
+    .pipe(webpackStream(webpackConfig, webpack))
+    // * Uncomment if you want an unminify js file.
+    // .pipe(babel())
+    .pipe(gulp.dest(ROOT))
     .pipe(connect.reload())
 });
 
-// WATCH FOR ANY CHANGES MADE IN THE SPECIFIED FILES
+// * WATCH FOR ANY CHANGES MADE IN THE SPECIFIED FILES
 gulp.task('watch', function() {
   gulp.watch(jsSources  , ['js']);
   gulp.watch(sassSources, ['sass']);
   gulp.watch(htmlSources, ['html']);
 });
 
-// TASK FOR THE LOCAL SERVER
+// * TASK FOR THE LOCAL SERVER
 gulp.task('connect', function() {
   connect.server({
     root: ROOT,
