@@ -4,6 +4,10 @@ const emptyDir      = require('empty-dir'),
       browserSync   = require('browser-sync'),
       reload        = browserSync.reload;
 
+// * Environmental Variables 
+const FTP_USER      = process.env.FTP_USER,
+      FTP_PASSWORD  = process.env.FTP_PASSWORD;
+
 // * Packages for GULP
 const gulp          = require('gulp'),
       babel         = require('gulp-babel'),
@@ -13,7 +17,10 @@ const gulp          = require('gulp'),
       cssnext       = require('postcss-cssnext'),
       uglify        = require('gulp-uglify'),
       concat        = require('gulp-concat'),
-      inject        = require('gulp-inject');
+      inject        = require('gulp-inject'),
+// * Automate Deployment
+      gutil         = require('gulp-util'),
+      ftp           = require('vinyl-ftp');
 
 // * Packages for WEBPACK      
 const webpackStream = require("webpack-stream"),
@@ -37,10 +44,35 @@ const sassSources   = [ROOT + 'assets/**/*.scss'],
       htmlSources   = [ROOT + '*.html'],
       fontSources   = [ROOT + 'assets/fonts/**'],
       jsSources     = [ROOT + 'assets/**/*.js'],
-      jsBuldSRC     =  ROOT + 'assets/js/main.js';
+      jsBuildSRC    =  ROOT + 'assets/js/main.js';
 
 // * Check if a directory is empty or not
 function checkDirectoryContent(dirPath) { return !(emptyDir.sync(dirPath)) }
+
+// * Automate Deployment Gulp Task 
+gulp.task('deploy', function () {
+
+  var conn = ftp.create({
+    host: 'ftp-kakusin-g.heteml.net',
+    user: FTP_USER,
+    password: FTP_PASSWORD,
+    parallel: 10,
+    log: gutil.log
+  });
+
+  var globs = [
+    outputDir + '/assets/**/**',
+    outputDir + '/**'
+  ];
+
+  // using base = '.' will transfer everything to /public_html correctly
+  // turn off buffering in gulp.src for best performance
+
+  return gulp.src(globs, { base: 'dist', buffer: false })
+    .pipe(conn.newer('/hashimura/')) // only upload newer files
+    .pipe(conn.dest('/hashimura/'));
+
+});
 
 // * COPY FILES TO DIST ON BUILD
 gulp.task('copy', function() {
@@ -149,7 +181,7 @@ gulp.task('html', function() {
 
 gulp.task('inject', function () {
   var target = gulp.src(ROOT + 'index.html');
-  target.pipe(inject(gulp.src([jsBuldSRC, ROOT + 'assets/css/style.css' ], {read: false}),{relative: true})) // 2 - indicating that we need to inject all file with .js and .css extension.
+  target.pipe(inject(gulp.src([jsBuildSRC, ROOT + 'assets/css/style.css' ], {read: false}),{relative: true})) // 2 - indicating that we need to inject all file with .js and .css extension.
     .pipe(gulp.dest(NODE_ENV === 'development' ? ROOT : outputDir));
 });
 

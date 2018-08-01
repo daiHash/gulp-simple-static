@@ -6,7 +6,8 @@
   "scripts": {
     "clean": "rimraf dist",
     "dev": "gulp",
-    "build": "npm run clean && gulp build"
+    "build": "npm run clean && gulp build",
+    "deploy": "gulp deploy"
   },
   "repository": {
     "type": "git",
@@ -38,11 +39,13 @@
     "gulp-sass": "^4.0.1",
     "gulp-svgmin": "^1.2.4",
     "gulp-uglify": "^3.0.0",
+    "gulp-util": "^3.0.8",
     "imagemin-gifsicle": "^5.2.0",
     "imagemin-jpeg-recompress": "^5.1.0",
     "imagemin-pngquant": "^5.1.0",
     "postcss-cssnext": "^3.1.0",
     "rimraf": "^2.6.2",
+    "vinyl-ftp": "^0.6.1",
     "webpack": "^4.16.1",
     "webpack-stream": "^5.0.0"
   }
