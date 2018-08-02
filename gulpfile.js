@@ -11,8 +11,11 @@ const gulp          = require('gulp'),
       cleanCSS      = require('gulp-clean-css'),
       postcss       = require('gulp-postcss'),
       cssnext       = require('postcss-cssnext'),
+      pug           = require('gulp-pug'),
       uglify        = require('gulp-uglify'),
       concat        = require('gulp-concat'),
+      notify        = require("gulp-notify"),
+      plumber       = require("gulp-plumber"),
       inject        = require('gulp-inject');
 
 // * Packages for WEBPACK      
@@ -28,16 +31,17 @@ const imagemin      = require('gulp-imagemin'),
       svgmin        = require('gulp-svgmin');
 
 const ROOT          = './src/',
-      outputDir     = './dist';
+      outputDir     = './dist/';
 
 let   NODE_ENV      = process.env.NODE_ENV;
 
-const sassSources   = [ROOT + 'assets/**/*.scss'],
-      cssSources    = [ROOT + 'assets/css/*.css', ROOT + 'assets/css/**/*.css'],
-      htmlSources   = [ROOT + '*.html'],
+const sassSources   = [ROOT + 'assets/**/*.scss', '!' + ROOT + 'assets/**/_*.scss'],
+      cssSources    = ['tmp/assets/css/*.css', 'tmp/assets/css/**/*.css'],
+      htmlSources   = ['tmp/*.html', 'tmp/**/*.html', 'tmp/**/**/*.html'],
+      pugSources    = [ROOT + '*.pug', '!' + ROOT + 'include/_*.pug'],
       fontSources   = [ROOT + 'assets/fonts/**'],
       jsSources     = [ROOT + 'assets/**/*.js'],
-      jsBuldSRC     =  ROOT + 'assets/js/main.js';
+      jsBuildSRC    =  'tmp/assets/js/main.js';
 
 // * Check if a directory is empty or not
 function checkDirectoryContent(dirPath) { return !(emptyDir.sync(dirPath)) }
@@ -47,7 +51,7 @@ gulp.task('copy', function() {
   gulp.src(htmlSources).pipe(gulp.dest(outputDir));
  
   if (checkDirectoryContent(ROOT + 'assets/fonts')) {
-    gulp.src(fontSources).pipe(gulp.dest(outputDir + '/assets/fonts'))
+    gulp.src(fontSources).pipe(gulp.dest(outputDir + 'assets/fonts'));
   }  
 });
 
@@ -55,7 +59,7 @@ gulp.task('copy', function() {
 gulp.task('browser-sync', function() {
   browserSync({
       server: {
-          baseDir: ROOT
+          baseDir: 'tmp'
       }
   });
 });
@@ -70,7 +74,7 @@ gulp.task('sass', function() {
     .pipe(sass({style: 'expanded'}))
       .on('error', sass.logError)
     .pipe(concat('style.css'))
-    .pipe(gulp.dest(ROOT + 'assets/css/'))
+    .pipe(gulp.dest('tmp/assets/css/'))
     .pipe(reload({stream:true}));
 });
 
@@ -82,7 +86,7 @@ gulp.task('css:build', function() {
   gulp.src(cssSources)
   .pipe(postcss(processors))
   .pipe(cleanCSS({compatibility: 'ie8'}))
-  .pipe(gulp.dest(outputDir + '/assets/css/'));
+  .pipe(gulp.dest(outputDir + 'assets/css/'));
 });
 
 // * TASK TO COMPRESS JPG, JPEG, PNG AMD GIF FILES
@@ -100,7 +104,7 @@ gulp.task('imagemin', function(){
             colors:180
         })
       ]))
-      .pipe(gulp.dest(outputDir + '/assets/images'));
+      .pipe(gulp.dest(outputDir + 'assets/images'));
   }
 });
 // * TASK TO COMPRESS SVG FILES
@@ -110,14 +114,14 @@ gulp.task('svgmin', function(){
   if (checkDirectoryContent(ROOT + 'assets/images')) {
     gulp.src( srcGlob )
       .pipe(svgmin())
-      .pipe(gulp.dest(outputDir + '/assets/images'));
+      .pipe(gulp.dest(outputDir + 'assets/images'));
   }
 });
 
 // * JS TASK FOR BUILD PROCESS
 gulp.task('js:build', function() {
   NODE_ENV = 'production';
-  gulp.src(jsSources)
+  gulp.src(jsBuildSRC)
     .pipe(webpackStream(webpackConfig, webpack))
     // * Uncomment if you want an unminify js file.
     // .pipe(babel())
@@ -131,27 +135,36 @@ gulp.task('js', function() {
     .pipe(webpackStream(webpackConfig, webpack))
     // * Uncomment if you want an unminify js file.
     // .pipe(babel())
-    .pipe(gulp.dest(ROOT))
+    .pipe(gulp.dest('tmp/'))
     .pipe(reload({stream:true}));
 });
 
 // * WATCH FOR ANY CHANGES MADE IN THE SPECIFIED FILES
 gulp.task('watch', function() {
-  gulp.watch(jsSources  , ['js', 'bs-reload']);
+  gulp.watch(jsSources, ['js', 'bs-reload']);
   gulp.watch(sassSources, ['sass', 'bs-reload']);
-  gulp.watch(htmlSources, ['html', 'bs-reload']);
+  gulp.watch(pugSources, ['pug', 'bs-reload']);
 });
 
-gulp.task('html', function() {
+// * TASK FOR PUG AND HTML FILES
+gulp.task('pug', function () {
+  return gulp.src(pugSources)
+    .pipe(plumber({ errorHandler: notify.onError("Error: <%= error.message %>") }))
+    .pipe(pug({ pretty: true }))
+    .pipe(gulp.dest('tmp/'))
+    .pipe(reload({ stream: true }));
+});
+
+gulp.task('html:build', function() {
   gulp.src(htmlSources)
-    .pipe(reload({stream:true}));
+    .pipe(gulp.dest(outputDir));
 });
 
 gulp.task('inject', function () {
-  var target = gulp.src(ROOT + 'index.html');
-  target.pipe(inject(gulp.src([jsBuldSRC, ROOT + 'assets/css/style.css' ], {read: false}),{relative: true})) // 2 - indicating that we need to inject all file with .js and .css extension.
-    .pipe(gulp.dest(NODE_ENV === 'development' ? ROOT : outputDir));
+  var target = gulp.src(ROOT + 'views/index.html');
+  target.pipe(inject(gulp.src([jsBuildSRC, ROOT + 'assets/css/style.css' ], {read: false}),{relative: true})) // 2 - indicating that we need to inject all file with .js and .css extension.
+    .pipe(gulp.dest(NODE_ENV === 'development' ? ROOT + 'views' : outputDir));
 });
 
-gulp.task('default', ['html', 'sass', 'js', 'inject', 'watch', 'browser-sync']);
-gulp.task('build', ['copy', 'css:build', 'js:build', 'imagemin', 'svgmin']);
+gulp.task('default', ['pug', 'sass', 'js', 'watch', 'browser-sync']);
+gulp.task('build', ['copy','html:build', 'css:build', 'js:build', 'imagemin', 'svgmin']);
